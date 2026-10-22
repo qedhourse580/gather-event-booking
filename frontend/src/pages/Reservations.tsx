@@ -1,4 +1,4 @@
-import { useContext, useEffect, useState } from "react";
+import { useCallback, useContext, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { ArrowRight, Ticket, X } from "lucide-react";
 import { api, type Page, type Reservation } from "../api";
@@ -18,14 +18,16 @@ function Reservations() {
   const [busy, setBusy] = useState<number | null>(null);
   const [confirm, setConfirm] = useState<Reservation | null>(null);
   const [message, setMessage] = useState("");
-  const load = () =>
-    api<Page<Reservation>>(`reservations/?page=${page}`).then(setData);
+  const load = useCallback(
+    () => api<Page<Reservation>>(`reservations/?page=${page}`).then(setData),
+    [page],
+  );
   useEffect(() => {
     if (user) {
       setData(null);
       load().catch((e) => setError(e.message));
     }
-  }, [user, page]);
+  }, [user, load]);
   const cancel = async () => {
     if (!confirm) return;
     setBusy(confirm.id);

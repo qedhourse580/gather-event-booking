@@ -42,7 +42,8 @@ export class ApiError extends Error {
     super(message);
   }
 }
-function messages(value: unknown): string {
+/** APIのエラーレスポンス（文字列・配列・項目ごとのオブジェクト）を、画面に表示する1つの文にする */
+export function messages(value: unknown): string {
   if (typeof value === "string") return value;
   if (Array.isArray(value)) return value.map(messages).join(" ");
   if (value && typeof value === "object")
