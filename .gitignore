@@ -12,3 +12,4 @@ playwright-report/
 .DS_Store
 *.tsbuildinfo
 backend/schema.yaml
+.ruff_cache/

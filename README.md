@@ -18,6 +18,8 @@
 
 主催者も一般ユーザーの機能を利用できます。登録時に主催を希望しても、Djangoの管理者権限は付与されません。
 
+> デモのため、登録時に主催者を選べば誰でも主催者になれます。本番では、運営による承認や本人確認を経て主催者権限を付与する想定です。
+
 ## 実装で重視したこと
 
 ### 残り1席に同時に予約されても、定員を超えない
@@ -36,6 +38,12 @@
 
 画面上のボタン表示に加えて、APIで対象データを制限します。他人の予約や別の主催者のイベントを、IDを変更して読み取り・更新できないようにしています。権限外の対象は404で返します。
 
+### 開催中止は元に戻せない状態として扱い、予約を自動でキャンセルする
+
+公開状態は「下書き⇔公開」「公開→開催中止」だけを許可し、開催中止は終端にしています。開催中止にすると、同じ行ロックの中で有効な予約をすべてキャンセル扱いにし、予約数を0に戻し、履歴に「開催中止によるキャンセル」を残します。編集で日時を変える場合は開始日時が未来であることを確認し、日時を変えない編集（タイトルの修正など）は開始後でもできるようにしています。
+
+実装：[models.py](backend/booking/models.py)・[services.py](backend/booking/services.py) / 検証：[test_event_lifecycle.py](backend/tests/test_event_lifecycle.py)
+
 ### 失敗した操作を、画面からやり直せる
 
 入力エラー、満席、締切、通信失敗、検索結果なしを表示します。検索条件はURLに保持し、リロードや共有でも再現できます。予約競合時には最新の残席を再取得します。
@@ -53,7 +61,8 @@
 | DB | PostgreSQL 17（SQLiteは簡易起動用） |
 | 認証 | Djangoセッション認証、HttpOnly Cookie、CSRF検証 |
 | API仕様 | drf-spectacular / OpenAPI / Swagger UI |
-| テスト | pytest、pytest-django、Playwright |
+| テスト | pytest、pytest-django、Vitest、Testing Library、Playwright |
+| コード品質 | Ruff（Python）、ESLint・Prettier・TypeScript（フロントエンド） |
 | 実行環境 | Docker Compose、Gunicorn、Nginx |
 | CI | GitHub Actions：PostgreSQLテスト、仕様書検証、ビルド、E2E、コンテナ起動確認 |
 
@@ -116,19 +125,25 @@ npm run dev
 
 ```bash
 # バックエンド（backendフォルダ）
+ruff check .
+ruff format --check .
 python manage.py check
 python manage.py makemigrations --check --dry-run
 python -m pytest
 python manage.py spectacular --file schema.yaml --validate --fail-on-warn
 
 # フロントエンド（frontendフォルダ）
+npm run lint
+npm run format:check
+npm test
 npm run build
 npx playwright install chromium
 # Django起動・migrate・seed_demoの実行後
 npm run test:e2e
 ```
 
-- PostgreSQLではバックエンド27件。境界時刻、権限、CSRF、ロールバック、重複、同時予約・キャンセルを確認。
+- バックエンド66件（PostgreSQL）。境界時刻、権限、CSRF、ロールバック、重複、同時予約・キャンセル、公開状態の遷移、開催中止時の予約の自動キャンセルを確認。うち29件は、公開状態の遷移・予約／キャンセルの可否・日時と定員の判定を、APIを通さずに確かめる単体テスト。
+- フロントエンドの単体テスト21件（Vitest）。APIのエラー処理・CSRFヘッダー、日本時間での表示、イベントカードの表示、編集画面で選べる公開状態を確認。
 - ブラウザ4件。一般ユーザーの登録→予約→キャンセル、主催者の作成→編集、検索URL、デスクトップ・モバイルでの横はみ出しを確認。
 - CIの実行結果は冒頭のバッジから確認できます。
 
@@ -140,11 +155,13 @@ backend/
   booking/services.py     予約・キャンセルのトランザクション
   booking/serializers.py  入力検証・APIレスポンス
   booking/views.py        認証・検索・権限・API
-  tests/                  APIとPostgreSQL同時実行テスト
+  tests/                  API・単体テストとPostgreSQL同時実行テスト
 frontend/
   src/pages/              利用者・主催者の画面
   src/components/         共通表示・認証コンテキスト
+  src/lib/                画面の判定ロジック（公開状態の選択肢など）
   src/api.ts              API通信・CSRF・エラー処理
+  src/**/*.test.ts(x)     単体テスト（Vitest）
   e2e/                    ブラウザの操作テスト
 docs/                     要件・設計・運用手順
 ```
@@ -157,7 +174,7 @@ docs/                     要件・設計・運用手順
 
 ## 今回の範囲と今後の改善
 
-全イベントは無料、予約は1アカウント1席です。決済・キャンセル待ち・通知・メール確認・パスワード再設定は今回の範囲外です。開催中止は画面と履歴で確認でき、通知メールは送りません。
+全イベントは無料、予約は1アカウント1席です。決済・キャンセル待ち・通知・メール確認・パスワード再設定は今回の範囲外です。開催中止にすると予約は自動でキャンセル扱いになり、画面と履歴で確認できます。通知メールは送りません。
 
 次の改善候補は、主催者による日時変更時の通知、イベント変更の履歴、共有キャッシュによるレート制限です。大量アクセス時の負荷試験や可用性を実証したものではありません。
 
