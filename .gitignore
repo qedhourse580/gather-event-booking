@@ -1,0 +1,14 @@
+.env
+*.sqlite3
+*.log
+__pycache__/
+.pytest_cache/
+.venv/
+node_modules/
+frontend/dist/
+backend/staticfiles/
+test-results/
+playwright-report/
+.DS_Store
+*.tsbuildinfo
+backend/schema.yaml
