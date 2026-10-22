@@ -65,10 +65,10 @@ function App() {
           <Link to="/" className="logo">
             gather<span className="logo-period">.</span>
           </Link>
-          <span>次の体験に、出会おう。</span>
-          <small>
-            © {new Date().getFullYear()} Gather · Portfolio demonstration
-          </small>
+          <span>
+            イベント予約サービス（ポートフォリオ用のデモ。掲載イベントは架空です）
+          </span>
+          <small>© {new Date().getFullYear()} Gather</small>
         </footer>
       </BrowserRouter>
     </Auth.Provider>

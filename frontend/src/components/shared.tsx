@@ -1,13 +1,19 @@
 import React, { createContext, useContext, useState } from "react";
 import { Link, NavLink, useNavigate } from "react-router-dom";
 import {
-  ArrowUpRight,
-  CalendarDays,
+  Clock,
   Compass,
+  Laptop,
   MapPin,
+  Mountain,
+  Palette,
   Sparkles,
+  UsersRound,
+  UtensilsCrossed,
+  type LucideIcon,
 } from "lucide-react";
 import { api, type Event, type User } from "../api";
+import { dateBlock, seatStatus, timeRange } from "../lib/format";
 const categories = [
   ["", "すべて"],
   ["technology", "テクノロジー"],
@@ -64,54 +70,63 @@ function Empty({
     </div>
   );
 }
-function Cover({ event, large = false }: { event: Event; large?: boolean }) {
+const categoryIcons: Record<string, LucideIcon> = {
+  technology: Laptop,
+  art: Palette,
+  food: UtensilsCrossed,
+  outdoor: Mountain,
+  community: UsersRound,
+};
+function CategoryTag({ category }: { category: string }) {
+  const Icon = categoryIcons[category] || Compass;
   return (
-    <div
-      className={`cover cover-${event.category} ${large ? "large" : ""}`}
-      aria-hidden="true"
-    >
-      <div className="art-orbit" />
-      <div className="art-orbit two" />
-      <div className="art-dot" />
-      <span className="cover-caption">
-        {event.category === "technology"
-          ? "BUILD / CONNECT"
-          : event.category === "art"
-            ? "MAKE SOMETHING"
-            : event.category === "food"
-              ? "TASTE THE MOMENT"
-              : event.category === "outdoor"
-                ? "OUTSIDE THE EVERYDAY"
-                : "GOOD PEOPLE, GOOD IDEAS"}
+    <span className={`category category-${category}`}>
+      <Icon size={14} aria-hidden="true" />
+      {categoryLabel(category)}
+    </span>
+  );
+}
+function DateBlock({ value }: { value: string }) {
+  const d = dateBlock(value);
+  return (
+    <span className="date-block">
+      <span className="date-month">{d.month}月</span>
+      <span className="date-day">{d.day}</span>
+      <span className="date-weekday">（{d.weekday}）</span>
+    </span>
+  );
+}
+function SeatMeter({
+  event,
+}: {
+  event: Pick<Event, "remaining" | "capacity" | "can_book">;
+}) {
+  const seat = seatStatus(event);
+  return (
+    <div className={`seat-meter seat-${seat.level}`}>
+      <span className="seat-label">{seat.label}</span>
+      <span className="seat-bar" aria-hidden="true">
+        <span style={{ width: `${Math.round(seat.filled * 100)}%` }} />
       </span>
-      <span className="cover-brand">gather ↗</span>
     </div>
   );
 }
 function EventCard({ event }: { event: Event }) {
   return (
     <Link to={`/events/${event.id}`} className="event-card">
-      <Cover event={event} />
+      <DateBlock value={event.starts_at} />
       <div className="card-body">
-        <div className="card-meta">
-          <span className="category">{categoryLabel(event.category)}</span>
-          <span className={`seats ${event.remaining === 0 ? "full" : ""}`}>
-            {event.remaining === 0 ? "満席" : `残り ${event.remaining} 席`}
-          </span>
-        </div>
+        <CategoryTag category={event.category} />
         <h3>{event.title}</h3>
-        <p>
-          <CalendarDays size={15} />
-          {date(event.starts_at)} {time(event.starts_at)}〜
+        <p className="card-line">
+          <Clock size={15} aria-hidden="true" />
+          {timeRange(event.starts_at, event.ends_at)}
         </p>
-        <p>
-          <MapPin size={15} />
+        <p className="card-line">
+          <MapPin size={15} aria-hidden="true" />
           {event.location}
         </p>
-        <div className="card-bottom">
-          <span>参加無料</span>
-          <ArrowUpRight size={18} />
-        </div>
+        <SeatMeter event={event} />
       </div>
     </Link>
   );
@@ -164,7 +179,6 @@ function Header() {
               </Link>
               <Link to="/register" className="button small">
                 新規登録
-                <ArrowUpRight size={15} />
               </Link>
             </>
           )}
@@ -184,7 +198,9 @@ export {
   ErrorBox,
   Loading,
   Empty,
-  Cover,
+  CategoryTag,
+  DateBlock,
+  SeatMeter,
   EventCard,
   Header,
 };

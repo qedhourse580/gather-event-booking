@@ -62,13 +62,8 @@ function Organizer() {
     );
   return (
     <main className="main">
-      <div className="section-head">
-        <div>
-          <p className="eyebrow dark">ORGANIZER WORKSPACE</p>
-          <h1 className="page-title">
-            主催イベント<span className="accent-dot">.</span>
-          </h1>
-        </div>
+      <div className="page-head">
+        <h1 className="page-title">主催イベント</h1>
         <Link className="button" to="/organizer/new">
           <Plus size={18} />
           イベントを作成
@@ -92,16 +87,14 @@ function Organizer() {
               <tbody>
                 {data.results.map((event) => (
                   <tr key={event.id}>
-                    <td>
+                    <td data-label="イベント">
                       <strong>{event.title}</strong>
                       <small>
                         {date(event.starts_at)} {time(event.starts_at)}
                       </small>
                     </td>
-                    <td>
-                      <span
-                        className={`status-pill ${event.status === "published" ? "active" : ""}`}
-                      >
+                    <td data-label="公開状態">
+                      <span className={`status-pill status-${event.status}`}>
                         {event.status === "published"
                           ? "公開中"
                           : event.status === "draft"
@@ -109,10 +102,10 @@ function Organizer() {
                             : "開催中止"}
                       </span>
                     </td>
-                    <td>
+                    <td data-label="予約状況">
                       {event.reserved_count} / {event.capacity} 人
                     </td>
-                    <td>
+                    <td data-label="操作">
                       <div className="table-actions">
                         <Link to={`/organizer/${event.id}/edit`}>編集</Link>
                         <button
@@ -143,8 +136,8 @@ function Organizer() {
         </>
       ) : (
         !error && (
-          <Empty title="最初のイベントを作成しましょう">
-            あなたの好きなことを、みんなと共有する場所に。
+          <Empty title="まだイベントがありません">
+            「イベントを作成」から、最初のイベントを登録してください。
           </Empty>
         )
       )}

@@ -44,14 +44,29 @@ describe("表示用の変換", () => {
 });
 
 describe("EventCard", () => {
-  it("タイトル・日時・場所・残席を表示し、詳細ページへリンクする", () => {
+  it("日付・タイトル・時間・場所・残席を表示し、詳細ページへリンクする", () => {
     renderCard(baseEvent);
 
     expect(screen.getByRole("link")).toHaveAttribute("href", "/events/7");
+    expect(screen.getByText("10月")).toBeInTheDocument();
+    expect(screen.getByText("28")).toBeInTheDocument();
+    expect(screen.getByText("（水）")).toBeInTheDocument();
+    expect(screen.getByText("アート・カルチャー")).toBeInTheDocument();
     expect(screen.getByText("はじめての陶芸")).toBeInTheDocument();
-    expect(screen.getByText(/10月28日\(水\) 14:00〜/)).toBeInTheDocument();
+    expect(screen.getByText("14:00〜16:00")).toBeInTheDocument();
     expect(screen.getByText("東京・清澄白河")).toBeInTheDocument();
-    expect(screen.getByText("残り 9 席")).toBeInTheDocument();
+    expect(screen.getByText("残り9席 / 12席")).toBeInTheDocument();
+  });
+
+  it("残席が少ないときは「残りわずか」の表示にする", () => {
+    const { container } = renderCard({
+      ...baseEvent,
+      reserved_count: 10,
+      remaining: 2,
+    });
+
+    expect(screen.getByText("残り2席")).toBeInTheDocument();
+    expect(container.querySelector(".seat-meter")).toHaveClass("seat-few");
   });
 
   it("残席が0なら「満席」と表示する", () => {

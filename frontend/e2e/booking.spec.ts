@@ -6,7 +6,7 @@ test("visitor can sign up, reserve, see their reservation, and cancel", async ({
 }) => {
   await page.goto("/");
   await expect(
-    page.getByRole("heading", { name: "気になるイベントを探す." }),
+    page.getByRole("heading", { name: "イベントを探す" }),
   ).toBeVisible();
   await page.getByRole("link", { name: "新規登録" }).click();
   await page.getByLabel("表示名").fill("予約する人");

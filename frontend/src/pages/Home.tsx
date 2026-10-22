@@ -1,13 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
-import {
-  ArrowRight,
-  ArrowUpRight,
-  ChevronLeft,
-  ChevronRight,
-  Search,
-  Users,
-} from "lucide-react";
+import { ChevronLeft, ChevronRight, Search } from "lucide-react";
 import { api, type Event, type Page } from "../api";
 import {
   categories,
@@ -50,106 +43,64 @@ function Home() {
   };
   return (
     <>
-      <section className="hero">
-        <div className="hero-copy">
-          <div className="eyebrow">
-            <span /> DISCOVER YOUR NEXT EXPERIENCE
+      <section className="search-hero">
+        <div className="search-hero-inner">
+          <h1>イベントを探す</h1>
+          <p>勉強会・ワークショップ・交流会を探して、そのまま予約できます。</p>
+          <form
+            className="search-bar"
+            role="search"
+            onSubmit={(e) => {
+              e.preventDefault();
+              update("q", draft);
+            }}
+          >
+            <Search size={20} aria-hidden="true" />
+            <input
+              aria-label="キーワードでイベントを検索"
+              placeholder="キーワード・場所（例：Python、渋谷、オンライン）"
+              value={draft}
+              onChange={(e) => setDraft(e.target.value)}
+            />
+            <button className="button" type="submit">
+              検索する
+            </button>
+          </form>
+          <div className="filters">
+            <div className="category-tabs" aria-label="カテゴリー">
+              {categories.map(([key, label]) => (
+                <button
+                  key={key}
+                  className={
+                    params.get("category") === key ||
+                    (!params.get("category") && !key)
+                      ? "selected"
+                      : ""
+                  }
+                  onClick={() => update("category", key)}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+            <label className="checkbox">
+              <input
+                type="checkbox"
+                checked={params.get("available") === "true"}
+                onChange={(e) =>
+                  update("available", e.target.checked ? "true" : "")
+                }
+              />
+              空席のあるイベントだけ表示
+            </label>
           </div>
-          <h1>
-            いつもの日々に、
-            <br />
-            新しい<span>きっかけ</span>を。
-          </h1>
-          <p>
-            気になることから、はじめよう。
-            <br />
-            好きなことと、まだ知らない仲間に出会う場所。
-          </p>
-          <a href="#events" className="hero-link">
-            あなたの次の体験を見つける
-            <ArrowRight size={19} />
-          </a>
         </div>
-        <div className="hero-art" aria-hidden="true">
-          <div className="hero-ring" />
-          <div className="hero-sticker">
-            HELLO,
-            <br />
-            NEW
-            <br />
-            <i>POSSIBILITIES.</i>
-            <ArrowUpRight size={54} />
-          </div>
-          <div className="floating-tag">
-            <Users size={17} /> 好きなことが、つながりになる。
-          </div>
-          <div className="tiny-star">✳</div>
-        </div>
-        <span className="hero-index">
-          01 — EVERY GOOD THING STARTS WITH A MEETING.
-        </span>
       </section>
       <main id="events" className="main">
-        <div className="section-head">
-          <div>
-            <p className="eyebrow dark">FIND YOUR INTEREST</p>
-            <h2>
-              気になるイベントを探す<span className="accent-dot">.</span>
-            </h2>
-          </div>
-          <span className="section-note">小さな一歩から、新しい出会いへ。</span>
-        </div>
-        <form
-          className="search-bar"
-          onSubmit={(e) => {
-            e.preventDefault();
-            update("q", draft);
-          }}
-        >
-          <Search size={21} />
-          <input
-            aria-label="キーワードでイベントを検索"
-            placeholder="キーワードやエリアで検索"
-            value={draft}
-            onChange={(e) => setDraft(e.target.value)}
-          />
-          <button className="button" type="submit">
-            検索する
-            <ArrowRight size={17} />
-          </button>
-        </form>
-        <div className="filters">
-          <div className="category-tabs" aria-label="カテゴリー">
-            {categories.map(([key, label]) => (
-              <button
-                key={key}
-                className={
-                  params.get("category") === key ||
-                  (!params.get("category") && !key)
-                    ? "selected"
-                    : ""
-                }
-                onClick={() => update("category", key)}
-              >
-                {label}
-              </button>
-            ))}
-          </div>
-          <label className="checkbox">
-            <input
-              type="checkbox"
-              checked={params.get("available") === "true"}
-              onChange={(e) =>
-                update("available", e.target.checked ? "true" : "")
-              }
-            />
-            空席ありのみ
-          </label>
-        </div>
-        <div className="results-header">
-          <span>
-            {loading ? "検索中…" : `${data?.count || 0} 件のイベント`}
-          </span>
+        <div className="results-header" aria-live="polite">
+          <strong>
+            {loading ? "検索しています…" : `${data?.count || 0}件のイベント`}
+          </strong>
           <span>開催日が近い順</span>
         </div>
         {error ? (
@@ -203,13 +154,13 @@ function Home() {
         )}
         <section className="host-banner">
           <div>
-            <p className="eyebrow dark">BRING PEOPLE TOGETHER</p>
-            <h2>あなたの「好き」を、イベントに。</h2>
-            <p>小さな集まりから、はじめてみませんか。</p>
+            <h2>イベントを主催する方へ</h2>
+            <p>
+              主催者として登録すると、イベントの作成・公開と、予約者の確認ができます。
+            </p>
           </div>
-          <Link className="button" to="/organizer">
-            イベントを主催する
-            <ArrowUpRight size={18} />
+          <Link className="button outline" to="/organizer">
+            主催者ページへ
           </Link>
         </section>
       </main>

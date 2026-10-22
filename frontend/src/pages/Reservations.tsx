@@ -1,15 +1,15 @@
 import { useCallback, useContext, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { ArrowRight, Ticket, X } from "lucide-react";
+import { X } from "lucide-react";
 import { api, type Page, type Reservation } from "../api";
 import {
   Auth,
+  DateBlock,
   Empty,
   ErrorBox,
   Loading,
-  date,
-  time,
 } from "../components/shared";
+import { timeRange } from "../lib/format";
 function Reservations() {
   const { user } = useContext(Auth);
   const [data, setData] = useState<Page<Reservation> | null>(null);
@@ -55,10 +55,9 @@ function Reservations() {
     );
   return (
     <main className="main">
-      <p className="eyebrow dark">YOUR EXPERIENCES</p>
-      <h1 className="page-title">
-        予約したイベント<span className="accent-dot">.</span>
-      </h1>
+      <div className="page-head">
+        <h1 className="page-title">予約したイベント</h1>
+      </div>
       {error && <ErrorBox message={error} />}
       {message && (
         <div className="notice success" role="status">
@@ -72,9 +71,7 @@ function Reservations() {
           <div className="reservation-list">
             {data.results.map((r) => (
               <article key={r.id} className="reservation-card">
-                <div className={`mini-cover cover-${r.event.category}`}>
-                  <Ticket size={30} />
-                </div>
+                <DateBlock value={r.event.starts_at} />
                 <div className="reservation-info">
                   <span
                     className={`status-pill ${r.status === "active" ? "active" : ""}`}
@@ -88,7 +85,7 @@ function Reservations() {
                     <h2>{r.event.title}</h2>
                   </Link>
                   <p>
-                    {date(r.event.starts_at)} {time(r.event.starts_at)} ／{" "}
+                    {timeRange(r.event.starts_at, r.event.ends_at)} ／{" "}
                     {r.event.location}
                   </p>
                 </div>
@@ -121,7 +118,6 @@ function Reservations() {
           <Empty title="まだ予約したイベントがありません">
             <Link to="/" className="button">
               イベントを探す
-              <ArrowRight size={16} />
             </Link>
           </Empty>
         )

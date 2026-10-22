@@ -1,6 +1,5 @@
 import React, { useContext, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
-import { ArrowRight, Sparkles } from "lucide-react";
 import { api } from "../api";
 import { Auth, Empty, ErrorBox } from "../components/shared";
 function AuthPage({ register = false }: { register?: boolean }) {
@@ -47,25 +46,17 @@ function AuthPage({ register = false }: { register?: boolean }) {
   return (
     <main className="auth-layout">
       <div className="auth-intro">
-        <p className="eyebrow dark">A NEW EXPERIENCE AWAITS</p>
-        <h1>
-          出会いの先に、
-          <br />
-          新しい自分。
-        </h1>
+        <h1>{register ? "アカウント登録" : "ログイン"}</h1>
         <p>
-          気になるイベントを見つけて、
-          <br />
-          次の一歩を踏み出そう。
+          ログインすると、イベントの予約と、予約したイベントの確認・キャンセルができます。主催者として登録すると、イベントを作成・公開できます。
         </p>
-        <Sparkles size={70} />
       </div>
       <form className="auth-card" onSubmit={submit}>
-        <h1>{register ? "アカウントをつくる" : "おかえりなさい"}</h1>
+        <h2>{register ? "アカウント情報" : "ユーザー名とパスワード"}</h2>
         <p>
           {register
-            ? "無料で登録して、イベントに参加しましょう。"
-            : "ログインして、次の体験を見つけましょう。"}
+            ? "表示名・ユーザー名・パスワードを入力してください。"
+            : "ユーザー名とパスワードを入力してください。"}
         </p>
         {error && <ErrorBox message={error} />}
         {register && (
@@ -113,7 +104,6 @@ function AuthPage({ register = false }: { register?: boolean }) {
         )}
         <button type="submit" className="button wide" disabled={busy}>
           {busy ? "処理しています…" : register ? "登録する" : "ログイン"}
-          <ArrowRight size={18} />
         </button>
         <p className="auth-switch">
           {register ? "アカウントをお持ちの方" : "はじめての方"}

@@ -94,7 +94,7 @@ function Editor() {
       </Link>
       <h1>{id ? "イベントを編集" : "新しいイベントを作成"}</h1>
       <p className="muted">
-        体験の内容と参加条件を、わかりやすく伝えましょう。
+        参加者が予約を判断できるよう、日時・場所・定員・締切を入力してください。
       </p>
       <form className="editor-form" onSubmit={submit}>
         {error && <ErrorBox message={error} />}

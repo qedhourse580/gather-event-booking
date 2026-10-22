@@ -1,24 +1,24 @@
 import { useContext, useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import {
-  ArrowRight,
   CalendarDays,
   Check,
   ChevronLeft,
   Clock,
   MapPin,
-  Users,
+  UserRound,
 } from "lucide-react";
 import { api, ApiError, type Event } from "../api";
 import {
   Auth,
-  Cover,
+  CategoryTag,
   ErrorBox,
   Loading,
+  SeatMeter,
   date,
   time,
-  categoryLabel,
 } from "../components/shared";
+import { timeRange } from "../lib/format";
 function Detail() {
   const { id } = useParams();
   const { user } = useContext(Auth);
@@ -64,6 +64,7 @@ function Detail() {
         {error ? <ErrorBox message={error} /> : <Loading />}
       </main>
     );
+  const cancelled = event.status === "cancelled";
   return (
     <main className="main detail">
       <Link to="/" className="back-link">
@@ -71,47 +72,54 @@ function Detail() {
         イベント一覧へ
       </Link>
       <div className="detail-layout">
-        <article>
-          <Cover event={event} large />
-          <span className="category">{categoryLabel(event.category)}</span>
+        <header className="detail-header">
+          <CategoryTag category={event.category} />
           <h1>{event.title}</h1>
-          <div className="detail-meta">
-            <p>
-              <CalendarDays size={19} />
-              {date(event.starts_at)} {time(event.starts_at)}–
-              {time(event.ends_at)}
-            </p>
-            <p>
-              <MapPin size={19} />
-              {event.location}
-            </p>
-            <p>
-              <Users size={19} />
-              定員 {event.capacity} 人
-            </p>
-          </div>
-          <div className="article-section">
-            <h2>このイベントについて</h2>
-            <p className="description">{event.description}</p>
-          </div>
-          <div className="article-section">
-            <h2>主催者</h2>
-            <p className="host-name">
-              <span className="avatar">{event.organizer_name.slice(0, 1)}</span>
-              {event.organizer_name}
-            </p>
-          </div>
-        </article>
-        <aside className="booking-panel">
-          <span className="eyebrow dark">YOUR NEXT EXPERIENCE</span>
-          <h2>この体験に参加する</h2>
-          <div className="price">
-            無料<span>／ 1名</span>
-          </div>
-          <p className="remaining">
-            <span />
-            残り {event.remaining} 席 / 定員 {event.capacity} 人
-          </p>
+          {cancelled && (
+            <div className="notice warning" role="status">
+              このイベントは開催中止になりました。
+            </div>
+          )}
+          <dl className="detail-summary">
+            <div>
+              <dt>
+                <CalendarDays size={18} aria-hidden="true" />
+                日時
+              </dt>
+              <dd>
+                {date(event.starts_at)}{" "}
+                {timeRange(event.starts_at, event.ends_at)}
+              </dd>
+            </div>
+            <div>
+              <dt>
+                <MapPin size={18} aria-hidden="true" />
+                場所
+              </dt>
+              <dd>{event.location}</dd>
+            </div>
+            <div>
+              <dt>
+                <UserRound size={18} aria-hidden="true" />
+                主催
+              </dt>
+              <dd>{event.organizer_name}</dd>
+            </div>
+          </dl>
+        </header>
+        <aside className="booking-panel" aria-labelledby="booking-title">
+          <h2 id="booking-title">参加予約</h2>
+          <SeatMeter event={event} />
+          <dl className="booking-facts">
+            <div>
+              <dt>参加費</dt>
+              <dd>無料</dd>
+            </div>
+            <div>
+              <dt>定員</dt>
+              <dd>{event.capacity}人</dd>
+            </div>
+          </dl>
           {error && <ErrorBox message={error} />}
           {success ? (
             <div className="notice success" role="status">
@@ -124,41 +132,44 @@ function Detail() {
               onClick={book}
               disabled={busy || !event.can_book}
             >
-              {busy ? (
-                "予約しています…"
-              ) : event.can_book ? (
-                <>
-                  {user ? "このイベントを予約する" : "ログインして予約する"}
-                  <ArrowRight size={18} />
-                </>
-              ) : (
-                "予約受付は終了しました"
-              )}
+              {busy
+                ? "予約しています…"
+                : event.can_book
+                  ? user
+                    ? "このイベントを予約する"
+                    : "ログインして予約する"
+                  : cancelled
+                    ? "開催中止のため予約できません"
+                    : event.remaining === 0
+                      ? "満席のため予約できません"
+                      : "予約受付は終了しました"}
             </button>
           )}
           <p className="panel-note">1アカウントにつき1席まで予約できます。</p>
-          <div className="deadline">
-            <Clock size={16} />
-            <div>
-              予約締切
-              <br />
+          <ul className="deadlines">
+            <li>
+              <Clock size={16} aria-hidden="true" />
+              <span>予約締切</span>
               <strong>
                 {date(event.booking_deadline)} {time(event.booking_deadline)}
               </strong>
-            </div>
-          </div>
-          <div className="deadline">
-            <CalendarDays size={16} />
-            <div>
-              キャンセル期限
-              <br />
+            </li>
+            <li>
+              <Clock size={16} aria-hidden="true" />
+              <span>キャンセル期限</span>
               <strong>
                 {date(event.cancellation_deadline)}{" "}
                 {time(event.cancellation_deadline)}
               </strong>
-            </div>
-          </div>
+            </li>
+          </ul>
         </aside>
+        <article className="detail-body">
+          <section className="article-section">
+            <h2>イベントの内容</h2>
+            <p className="description">{event.description}</p>
+          </section>
+        </article>
       </div>
     </main>
   );
