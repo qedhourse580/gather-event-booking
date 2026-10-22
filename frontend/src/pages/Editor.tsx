@@ -9,10 +9,13 @@ import {
   Loading,
   categories,
 } from "../components/shared";
-const localInput = (value: string) => {
-  const d = new Date(value);
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}T${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
-};
+import {
+  isEditable,
+  selectableStatuses,
+  statusLabels,
+  toLocalInput,
+} from "../lib/eventRules";
+
 function Editor() {
   const { id } = useParams();
   const { user } = useContext(Auth);
@@ -29,6 +32,14 @@ function Editor() {
   const submit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const form = new FormData(e.currentTarget);
+    if (
+      form.get("status") === "cancelled" &&
+      event?.status !== "cancelled" &&
+      !window.confirm(
+        "開催中止にすると、予約はすべてキャンセル扱いになり、元に戻せません。よろしいですか？",
+      )
+    )
+      return;
     const payload: Record<string, unknown> = Object.fromEntries(form);
     for (const k of [
       "starts_at",
@@ -65,6 +76,14 @@ function Editor() {
     return (
       <main className="main">
         {error ? <ErrorBox message={error} /> : <Loading />}
+      </main>
+    );
+  if (event && !isEditable(event))
+    return (
+      <main className="main">
+        <Empty title="開催中止にしたイベントは編集できません">
+          <Link to="/organizer">主催者ページへ戻る</Link>
+        </Empty>
       </main>
     );
   return (
@@ -138,7 +157,7 @@ function Editor() {
                 type="datetime-local"
                 name={key}
                 required
-                defaultValue={event ? localInput(event[key]) : ""}
+                defaultValue={event ? toLocalInput(event[key]) : ""}
               />
             </label>
           ))}
@@ -156,14 +175,16 @@ function Editor() {
           <label>
             公開状態
             <select name="status" defaultValue={event?.status || "draft"}>
-              <option value="draft">下書き</option>
-              <option value="published">公開する</option>
-              <option value="cancelled">開催中止</option>
+              {selectableStatuses(event).map((status) => (
+                <option value={status} key={status}>
+                  {statusLabels[status]}
+                </option>
+              ))}
             </select>
           </label>
         </div>
         <p className="form-note">
-          日時はお使いの端末のタイムゾーンで入力します。予約のあるイベントは下書きに戻せません。開催中止後も予約履歴は保持されます。
+          日時はお使いの端末のタイムゾーンで入力します。予約のあるイベントは下書きに戻せません。開催中止にすると予約はすべてキャンセル扱いになり、元に戻せません（予約履歴は保持されます）。
         </p>
         <div className="form-actions">
           <Link className="button outline" to="/organizer">
