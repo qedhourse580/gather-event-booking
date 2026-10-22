@@ -1,9 +1,9 @@
 from django.contrib.auth import authenticate, login, logout
 from django.db import connection, transaction
-from django.db.models import Q
+from django.db.models import F, Q
 from django.http import JsonResponse
-from django.shortcuts import get_object_or_404
 from django.middleware.csrf import get_token
+from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import csrf_protect, ensure_csrf_cookie
@@ -14,6 +14,7 @@ from rest_framework.exceptions import PermissionDenied, ValidationError
 from rest_framework.response import Response
 from rest_framework.throttling import ScopedRateThrottle
 from rest_framework.views import APIView
+
 from .models import Event, Reservation
 from .serializers import (
     AttendeeSerializer,
@@ -24,7 +25,7 @@ from .serializers import (
     SessionSerializer,
     UserSerializer,
 )
-from .services import cancel, reserve
+from .services import cancel, cancel_active_reservations, reserve
 
 
 @extend_schema(responses=SessionSerializer)
@@ -129,8 +130,6 @@ class EventViewSet(viewsets.ReadOnlyModelViewSet):
         if location:
             queryset = queryset.filter(location__icontains=location)
         if self.request.query_params.get("available") == "true":
-            from django.db.models import F
-
             queryset = queryset.filter(
                 reserved_count__lt=F("capacity"), booking_deadline__gt=timezone.now()
             )
@@ -183,15 +182,21 @@ class OrganizerEventViewSet(viewsets.ModelViewSet):
 
     @transaction.atomic
     def update(self, request, *args, **kwargs):
-        # The same row lock as reservation creation protects capacity edits.
+        # 予約処理と同じ行ロックをかけ、定員・公開状態の変更と予約が競合しないようにする
         partial = kwargs.pop("partial", False)
         instance = get_object_or_404(
             self.get_queryset().select_for_update(), pk=kwargs["pk"]
         )
+        previous_status = instance.status
         serializer = self.get_serializer(instance, data=request.data, partial=partial)
         serializer.is_valid(raise_exception=True)
-        serializer.save()
-        return Response(serializer.data)
+        event = serializer.save()
+        if (
+            previous_status != Event.Status.CANCELLED
+            and event.status == Event.Status.CANCELLED
+        ):
+            cancel_active_reservations(event)
+        return Response(self.get_serializer(event).data)
 
     @extend_schema(responses=AttendeeSerializer(many=True))
     @action(detail=True, methods=["get"])

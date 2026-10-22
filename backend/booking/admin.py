@@ -1,5 +1,6 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
+
 from .models import Event, Reservation, ReservationLog, User
 
 
@@ -28,7 +29,7 @@ class EventAdmin(admin.ModelAdmin):
         return False
 
     def has_change_permission(self, request, obj=None):
-        return False  # capacity changes must pass through the locked service/API
+        return False  # 定員・予約数の変更は、行ロックをかけるサービス層とAPIを必ず通す
 
     def has_delete_permission(self, request, obj=None):
         return False

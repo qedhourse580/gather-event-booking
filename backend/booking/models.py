@@ -64,8 +64,18 @@ class Event(models.Model):
             ),
         ]
 
+    # 主催者が変更できる公開状態の遷移。開催中止は元に戻せない（終端）
+    ALLOWED_TRANSITIONS = {
+        Status.DRAFT: {Status.DRAFT, Status.PUBLISHED},
+        Status.PUBLISHED: {Status.PUBLISHED, Status.DRAFT, Status.CANCELLED},
+        Status.CANCELLED: set(),
+    }
+
     def __str__(self):
         return self.title
+
+    def can_change_status_to(self, new_status):
+        return new_status in self.ALLOWED_TRANSITIONS[self.status]
 
 
 class Reservation(models.Model):
@@ -93,12 +103,21 @@ class Reservation(models.Model):
             )
         ]
 
+    def __str__(self):
+        return f"{self.event} / {self.user} ({self.get_status_display()})"
+
 
 class ReservationLog(models.Model):
+    class Action(models.TextChoices):
+        RESERVED = "reserved", "予約"
+        CANCELLED = "cancelled", "キャンセル"
+        EVENT_CANCELLED = "event_cancelled", "開催中止によるキャンセル"
+
     reservation = models.ForeignKey(
         Reservation, on_delete=models.PROTECT, related_name="history"
     )
-    action = models.CharField(
-        max_length=12, choices=[("reserved", "予約"), ("cancelled", "キャンセル")]
-    )
+    action = models.CharField(max_length=20, choices=Action.choices)
     created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.reservation_id}: {self.get_action_display()}"
