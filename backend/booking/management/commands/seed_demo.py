@@ -1,8 +1,10 @@
-from datetime import timedelta
-import secrets
 import os
+import secrets
+from datetime import timedelta
+
 from django.core.management.base import BaseCommand
 from django.utils import timezone
+
 from booking.models import Event, User
 
 

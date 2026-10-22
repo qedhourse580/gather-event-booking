@@ -1,15 +1,17 @@
 from datetime import timedelta
 from unittest.mock import patch
+
 import pytest
 from django.utils import timezone
 from rest_framework.test import APIClient
+
 from booking.models import Reservation, ReservationLog
 from booking.services import reserve
 
 pytestmark = pytest.mark.django_db
 
 
-def test_reserve_cancel_and_rebook(client, event, user):
+def test_予約とキャンセルと再予約ができる(client, event, user):
     response = client.post(f"/api/events/{event.pk}/reserve/")
     assert response.status_code == 201
     reservation = response.data["id"]
@@ -26,7 +28,7 @@ def test_reserve_cancel_and_rebook(client, event, user):
     assert ReservationLog.objects.count() == 3
 
 
-def test_full_event_rejects_without_side_effects(client, event, other):
+def test_満席なら予約を拒否しデータを変えない(client, event, other):
     event.capacity = 1
     event.save()
     reserve(event.pk, other)
@@ -36,7 +38,7 @@ def test_full_event_rejects_without_side_effects(client, event, other):
     assert event.reserved_count == 1
 
 
-def test_booking_deadline_is_exclusive(client, event):
+def test_予約締切ちょうどは予約できない(client, event):
     now = timezone.now()
     event.booking_deadline = now
     event.save()
@@ -45,7 +47,7 @@ def test_booking_deadline_is_exclusive(client, event):
     assert Reservation.objects.count() == 0
 
 
-def test_cancellation_deadline_is_exclusive(client, event, user):
+def test_キャンセル期限ちょうどはキャンセルできない(client, event, user):
     reservation = reserve(event.pk, user)
     now = timezone.now()
     event.cancellation_deadline = now
@@ -60,13 +62,13 @@ def test_cancellation_deadline_is_exclusive(client, event, user):
 
 
 @pytest.mark.parametrize("event_status", ["draft", "cancelled"])
-def test_non_public_events_cannot_be_booked(client, event, event_status):
+def test_公開中以外のイベントは予約できない(client, event, event_status):
     event.status = event_status
     event.save()
     assert client.post(f"/api/events/{event.pk}/reserve/").status_code == 404
 
 
-def test_cancelled_event_can_be_cancelled_after_deadline(client, event, user):
+def test_中止イベントは期限後でもキャンセルできる(client, event, user):
     reservation = reserve(event.pk, user)
     event.status = "cancelled"
     event.cancellation_deadline = timezone.now() - timedelta(hours=1)
@@ -75,7 +77,7 @@ def test_cancelled_event_can_be_cancelled_after_deadline(client, event, user):
     assert client.get(f"/api/events/{event.pk}/").status_code == 200
 
 
-def test_history_failure_rolls_back_entire_booking(event, user):
+def test_履歴の保存に失敗したら予約全体を取り消す(event, user):
     with patch(
         "booking.services.ReservationLog.objects.create",
         side_effect=RuntimeError("storage failure"),
@@ -87,14 +89,14 @@ def test_history_failure_rolls_back_entire_booking(event, user):
     assert Reservation.objects.count() == 0
 
 
-def test_other_user_cannot_read_or_cancel_reservation(client, event, other):
+def test_他人の予約は参照もキャンセルもできない(client, event, other):
     reservation = reserve(event.pk, other)
     assert client.get(f"/api/reservations/{reservation.pk}/").status_code == 404
     assert client.post(f"/api/reservations/{reservation.pk}/cancel/").status_code == 404
     assert client.get("/api/reservations/").data["count"] == 0
 
 
-def test_attendees_and_event_updates_are_owner_only(client, event):
+def test_予約者一覧とイベント編集は主催者本人だけ(client, event):
     assert client.get(f"/api/organizer/events/{event.pk}/attendees/").status_code == 404
     assert (
         client.patch(
@@ -105,15 +107,13 @@ def test_attendees_and_event_updates_are_owner_only(client, event):
     assert client.get("/api/organizer/events/").data["count"] == 0
 
 
-def test_anonymous_cannot_book_or_read_reservations(event):
+def test_未ログインでは予約も予約一覧の参照もできない(event):
     anonymous = APIClient()
     assert anonymous.post(f"/api/events/{event.pk}/reserve/").status_code == 403
     assert anonymous.get("/api/reservations/").status_code == 403
 
 
-def test_capacity_edit_cannot_discard_existing_reservations(
-    client, event, user, other, organizer
-):
+def test_既存の予約を減らす定員変更はできない(client, event, user, other, organizer):
     reserve(event.pk, user)
     reserve(event.pk, other)
     client.force_authenticate(organizer)
@@ -133,7 +133,7 @@ def test_capacity_edit_cannot_discard_existing_reservations(
 
 
 @pytest.mark.parametrize("capacity", [0, -1, 10001])
-def test_invalid_capacity(client, event, organizer, capacity):
+def test_範囲外の定員は拒否する(client, event, organizer, capacity):
     client.force_authenticate(organizer)
     assert (
         client.patch(
@@ -143,7 +143,7 @@ def test_invalid_capacity(client, event, organizer, capacity):
     )
 
 
-def test_attendees_only_include_current_event(client, event, organizer, user):
+def test_予約者一覧は対象イベントの予約だけを返す(client, event, organizer, user):
     reserve(event.pk, user)
     client.force_authenticate(organizer)
     response = client.get(f"/api/organizer/events/{event.pk}/attendees/")
@@ -151,7 +151,7 @@ def test_attendees_only_include_current_event(client, event, organizer, user):
     assert response.data["results"][0]["participant"] == "Alice"
 
 
-def test_public_filter_and_draft_visibility(client, event):
+def test_一覧の絞り込みと下書きの非表示(client, event):
     assert (
         client.get("/api/events/?q=Weekend&category=community&location=東京").data[
             "count"
@@ -165,14 +165,14 @@ def test_public_filter_and_draft_visibility(client, event):
     assert client.get(f"/api/events/{event.pk}/").status_code == 404
 
 
-def test_full_events_can_be_filtered(client, event, user):
+def test_満席のイベントを除外して絞り込める(client, event, user):
     event.capacity = 1
     event.save()
     reserve(event.pk, user)
     assert client.get("/api/events/?available=true").data["count"] == 0
 
 
-def test_registration_rejects_weak_password():
+def test_弱いパスワードでは登録できない():
     client = APIClient()
     response = client.post(
         "/api/auth/register/",
@@ -182,7 +182,7 @@ def test_registration_rejects_weak_password():
     assert response.status_code == 400
 
 
-def test_session_login_and_logout(user):
+def test_セッションでログインとログアウトができる(user):
     client = APIClient(enforce_csrf_checks=True)
     assert client.get("/api/auth/session/").data["user"] is None
     assert (
@@ -209,7 +209,7 @@ def test_session_login_and_logout(user):
     assert client.get("/api/auth/session/").data["user"] is None
 
 
-def test_signup_requires_csrf():
+def test_登録にはCSRFトークンが必要():
     client = APIClient(enforce_csrf_checks=True)
     client.get("/api/auth/session/")
     payload = {
@@ -228,7 +228,7 @@ def test_signup_requires_csrf():
     assert "password" not in response.data
 
 
-def test_health_and_schema():
+def test_ヘルスチェックとAPI仕様書を返す():
     client = APIClient()
     assert client.get("/api/health/").status_code == 200
     assert client.get("/api/schema/").status_code == 200
@@ -238,5 +238,5 @@ def test_health_and_schema():
     "path",
     ["/api/events/not-a-number/reserve/", "/api/reservations/not-a-number/cancel/"],
 )
-def test_invalid_path_ids_return_not_found(client, path):
+def test_不正なIDのパスは404を返す(client, path):
     assert client.post(path).status_code == 404

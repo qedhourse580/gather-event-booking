@@ -1,15 +1,17 @@
 from concurrent.futures import ThreadPoolExecutor
 from datetime import timedelta
 from threading import Barrier
+
 import pytest
 from django.db import close_old_connections, connection
 from django.utils import timezone
+
 from booking.models import Event, Reservation, User
 from booking.services import Conflict, cancel, reserve
 
 
 @pytest.mark.django_db(transaction=True)
-def test_simultaneous_last_seat_reservations():
+def test_残り1席に同時予約しても成功は1件だけ():
     if connection.vendor != "postgresql":
         pytest.skip(
             "Row-lock behavior must be verified against PostgreSQL; SQLite is not equivalent."
@@ -55,7 +57,7 @@ def test_simultaneous_last_seat_reservations():
 
 
 @pytest.mark.django_db(transaction=True)
-def test_concurrent_retries_do_not_duplicate_a_booking():
+def test_同じユーザーの同時予約で予約が重複しない():
     if connection.vendor != "postgresql":
         pytest.skip("Requires PostgreSQL row locks.")
     host = User.objects.create_user(username="host-retry", is_organizer=True)
@@ -96,7 +98,7 @@ def test_concurrent_retries_do_not_duplicate_a_booking():
 
 
 @pytest.mark.django_db(transaction=True)
-def test_concurrent_cancellation_only_returns_one_seat():
+def test_同時キャンセルでも空席は1人分だけ戻る():
     if connection.vendor != "postgresql":
         pytest.skip("Requires PostgreSQL row locks.")
     host = User.objects.create_user(username="host-cancel", is_organizer=True)
